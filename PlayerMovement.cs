@@ -8,12 +8,17 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] float runSpeed = 5f;
     [SerializeField] float jumpSpeed = 7f;
     [SerializeField] float climbSpeed = 5f;
-
+    [SerializeField] Vector2 deathKick = new Vector2(0f, 5f);
+    [SerializeField] GameObject bullet;
+    [SerializeField] Transform gun;
+    public GameObject he;
     Vector2 moveInput;
     Rigidbody2D myRigidbody;
     Animator myAnimator;
     CapsuleCollider2D myCapsuleCollider2D;
     BoxCollider2D myFeetCollider2D;
+
+    bool isAlive = true;
     // Start is called before the first frame update
     void Start()
     {
@@ -26,20 +31,30 @@ public class PlayerMovement : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        if(!isAlive) { return; }
         run();
         flipSprites();
         climbLadder();
+        Die();
+    }
+
+    void OnFire(InputValue value)
+    {
+        if (!isAlive) { return; }
+        Instantiate(bullet, gun.position, transform.rotation);
     }
 
     void OnMove(InputValue value)
     {
+        if (!isAlive) { return; }
         moveInput = value.Get<Vector2>();
         Debug.Log(moveInput);
     }
 
     void OnJump(InputValue value)
     {
-        if(!myFeetCollider2D.IsTouchingLayers(LayerMask.GetMask("Ground")))
+        if (!isAlive) { return; }
+        if (!myFeetCollider2D.IsTouchingLayers(LayerMask.GetMask("Ground")))
         {
             return;
         }
@@ -81,5 +96,16 @@ public class PlayerMovement : MonoBehaviour
         myRigidbody.velocity = climbVelocity;
         bool playerHasVerticalSpeed = Mathf.Abs(myRigidbody.velocity.y) > Mathf.Epsilon;
         myAnimator.SetBool("IsClimbing", playerHasVerticalSpeed);
+    }
+
+    void Die()
+    {
+        if(myCapsuleCollider2D.IsTouchingLayers(LayerMask.GetMask("Enemies" , "Trap", "Water")))
+        {
+            isAlive = false;
+            myAnimator.SetTrigger("Dying");
+            myRigidbody.velocity = deathKick;
+            FindObjectOfType<GameSession>().ProcessPlayerDeath();
+        }
     }
 }
